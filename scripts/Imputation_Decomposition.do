@@ -9,7 +9,7 @@
 * PART 1: Death registration outcomes and descriptives                         *
 * ---------------------------------------------------------------------------- *
 
-cd "/Users/nyuad/Downloads/MULTI - HIV AWARENESS 2"
+cd "/Users/nyuad/Downloads/MULTI-HIV AWARENESS 2"
 use "allcountries.dta", clear
 
 * Outcomes
@@ -71,27 +71,20 @@ encode country, gen(mi_country)
 
 // Set up MI environment
 ************************************
+recode recentlagvl (1=0 "(1) Positive: recent") (2=1 "(2) Positive: long term"), ge(recentlagvl_bin)
+
 mi set mlong
-mi register imputed mi_timesincelasttest recentlagvl 
+mi register imputed mi_timesincelasttest recentlagvl_bin 
 mi register regular age urban education curmar gender
 
 
 // Perform imputation
 ************************************
-mi impute chained ///
-    (mlogit, augment) mi_timesincelasttest ///
-    (mlogit, augment) recentlagvl, ///
-    add(20) rseed(12345)
+mi impute chained (mlogit) mi_timesincelasttest (logit) recentlagvl_bin = gender mi_country urban mi_age education, augment force add(20) rseed(12345)
 	
-	
-// Saving dataset with imputations 
-************************************
-save "/Users/nyuad/Downloads/MULTI - HIV AWARENESS 2/allcountries_imputed.dta", replace
-
-
 // Define control variables
 ************************************
-global indicontrols   "i.mi_timesincelasttest i.recentlagvl i.urban i.curmar c.age"
+global indicontrols   "i.mi_timesincelasttest i.recentlagvl_bin i.urban i.curmar c.age"
 *global deathscontrols "i.accidental ib1.facility"
 
 
@@ -143,16 +136,16 @@ drop if mi_educ_death_det == 999 //dropping inapplicable
 recode gender (1=0 "Male") (2=1 "Female"), ge(gender_bin)
 
 mi set mlong
-mi register imputed mi_timesincelasttest recentlagvl
+mi register imputed mi_timesincelasttest recentlagvl_bin
 mi register regular age urban education curmar gender_bin 
 
 
 // Perform imputation
 ************************************
-
-mi impute chained (mlogit, augment) mi_timesincelasttest /// 
-                   (mlogit, augment) recentlagvl, /// 
-    add(20) rseed(12345)
+mi impute chained (mlogit) mi_timesincelasttest (logit) recentlagvl_bin = gender mi_country urban mi_age education, augment force add(20) rseed(12345)
+	
+// Creating distribution table by gender
+************************************
 
 
 // Generate passive indicators
@@ -161,6 +154,7 @@ mi impute chained (mlogit, augment) mi_timesincelasttest ///
 mi passive: gen mi_timesincelasttest1 = (mi_timesincelasttest == 1)
 mi passive: gen mi_timesincelasttest2 = (mi_timesincelasttest == 2)
 mi passive: gen mi_timesincelasttest3 = (mi_timesincelasttest == 3)
+mi passive: gen mi_timesincelasttest4 = (mi_timesincelasttest == 4)
 
 mi passive: gen mi_recentlagvl1 = (recentlagvl == 1)
 mi passive: gen mi_recentlagvl2 = (recentlagvl == 2)
@@ -187,7 +181,9 @@ mi passive: gen mi_education2 = (education == 2)
 mi passive: gen mi_education3 = (education == 3)
 mi passive: gen mi_education4 = (education == 4)
 
-/*
+mi passive: gen mi_gender_bin0 = (gender_bin == 0)
+mi passive: gen mi_gender_bin1 = (gender_bin == 1)
+
 mi passive: gen mi_country1 = (mi_country == 1)
 mi passive: gen mi_country2 = (mi_country == 2)
 mi passive: gen mi_country3 = (mi_country == 3)
@@ -195,26 +191,21 @@ mi passive: gen mi_country4 = (mi_country == 4)
 mi passive: gen mi_country5 = (mi_country == 5)
 mi passive: gen mi_country6 = (mi_country == 6)
 
-reminders:
-change weights to denormalized in fairlie command
-add country dummies to pooled controls 
-*/
-
 // Define bootstrapping program
 ************************************
 
 capture program drop fairlie_boot_all
 program define fairlie_boot_all, rclass 
-    fairlie awareness_outcome (age: mi_age2-mi_age7) (curmar: mi_curmar2-mi_curmar5) mi_urban2 (education: mi_education2-mi_education4) (mi_timesincelasttest: mi_timesincelasttest1-mi_timesincelasttest2) mi_recentlagvl1 if mi_country == 5 [iweight = btwt0], by(gender_bin) pooled(age curmar urban education)
+    fairlie awareness_outcome (mi_timesincelasttest: mi_timesincelasttest1-mi_timesincelasttest3) mi_recentlagvl1 if mi_country == 5 [iweight = btwt0_b], by(gender_bin) pooled(mi_gender_bin0 mi_age2-mi_age7 mi_curmar2-mi_curmar5 mi_urban2 mi_education2-mi_education4 mi_country1-mi_country5 mi_timesincelasttest1-mi_timesincelasttest3 mi_recentlagvl1)
 		
          
     matrix b = e(b)
-    return scalar age = b[1,1]
-    return scalar curmar = b[1,2]
-    return scalar mi_urban2 = b[1,3]
-    return scalar education = b[1,4]
-    return scalar mi_timesincelasttest = b[1,5]
-    return scalar mi_recentlagvl1 = b[1,6]
+    return scalar mi_timesincelasttest = b[1,1]
+    return scalar mi_recentlagvl1 = b[1,2]
+    *return scalar mi_urban2 = b[1,3]
+    *return scalar education = b[1,4]
+    *return scalar mi_timesincelasttest = b[1,5]
+    *return scalar mi_recentlagvl1 = b[1,6]
 
     return scalar total_diff = e(diff)
     return scalar explained = e(expl)
@@ -230,8 +221,7 @@ tempfile boot_results_file
 tempname boot_results_handle
 
 postfile `boot_results_handle' impnum ///
-    age var_age curmar var_curmar mi_urban2 var_mi_urban2 education var_education /// 
-	mi_timesincelasttest var_mi_timesincelasttest mi_recentlagvl1 var_mi_recentlagvl1 ///
+    mi_timesincelasttest var_mi_timesincelasttest mi_recentlagvl1 var_mi_recentlagvl1 ///
     total_diff var_total_diff explained var_explained unexplained var_unexplained ///
     using `boot_results_file', replace
 
@@ -241,13 +231,13 @@ forvalues i = 1/20 {
     di "Bootstrapping imputation `i'..."
 
     tempfile bsfile
-    bootstrap r(age) r(curmar) r(mi_urban2) r(education) r(mi_timesincelasttest) r(mi_recentlagvl1) ///
+    bootstrap r(mi_timesincelasttest) r(mi_recentlagvl1) ///
               r(total_diff) r(explained) r(unexplained), ///
 			  reps(100) seed(2025) saving(`bsfile', replace): fairlie_boot_all 
 
     use `bsfile', clear
 
-    foreach j in 1 2 3 4 5 6 7 8 9 {
+    foreach j in 1 2 3 4 5 {
         summarize _bs_`j', detail
         scalar m`j' = r(mean)
         scalar v`j' = r(Var)
@@ -258,11 +248,7 @@ forvalues i = 1/20 {
         (m2) (v2) ///
         (m3) (v3) ///
         (m4) (v4) ///
-        (m5) (v5) ///
-        (m6) (v6) ///
-        (m7) (v7) ///
-        (m8) (v8) ///
-        (m9) (v9)
+        (m5) (v5)
 
     restore
 }
@@ -311,9 +297,9 @@ program define RUB, rclass
     return scalar ci_upper = ci_upper
 end
 
-local vars total_diff explained unexplained age curmar mi_urban2 education mi_timesincelasttest mi_recentlagvl1
+local vars total_diff explained unexplained mi_timesincelasttest mi_recentlagvl1
 
-matrix results = J(9, 5, .)
+matrix results = J(5, 5, .)
 
 local row = 1
 foreach v in `vars' {
@@ -327,7 +313,7 @@ foreach v in `vars' {
 }
 
 matrix colnames results = Estimate SE p_value CI_lower CI_upper
-matrix rownames results = total_diff explained unexplained age curmar mi_urban2 education mi_timesincelasttest mi_recentlagvl1
+matrix rownames results = total_diff explained unexplained mi_timesincelasttest mi_recentlagvl1
 
 matlist results, format(%9.4f)
 

@@ -9,7 +9,7 @@
 * PART 1: Death registration outcomes and descriptives                         *
 * ---------------------------------------------------------------------------- *
 
-cd "/Users/nyuad/Downloads/MULTI - HIV AWARENESS 2"
+cd "/Users/nyuad/Downloads/MULTI-HIV AWARENESS 2"
 use "allcountries.dta", clear
 
 * Outcomes
@@ -71,21 +71,20 @@ encode country, gen(mi_country)
 
 // Set up MI environment
 ************************************
+recode recentlagvl (1=0 "(1) Positive: recent") (2=1 "(2) Positive: long term"), ge(recentlagvl_bin)
+
 mi set mlong
-mi register imputed mi_timesincelasttest recentlagvl 
+mi register imputed mi_timesincelasttest recentlagvl_bin 
 mi register regular age urban education curmar gender
 
 
 // Perform imputation
 ************************************
-mi impute chained ///
-    (mlogit, augment) mi_timesincelasttest ///
-    (mlogit, augment) recentlagvl, ///
-    add(20) rseed(12345)
+mi impute chained (mlogit) mi_timesincelasttest (logit) recentlagvl_bin = gender mi_country urban mi_age education, augment force add(20) rseed(12345)
 	
 // Define control variables
 ************************************
-global indicontrols   "i.mi_timesincelasttest i.recentlagvl i.urban i.curmar c.age"
+global indicontrols   "i.mi_timesincelasttest i.recentlagvl_bin i.urban i.curmar c.age"
 *global deathscontrols "i.accidental ib1.facility"
 
 
@@ -137,15 +136,13 @@ drop if mi_educ_death_det == 999 //dropping inapplicable
 recode gender (1=0 "Male") (2=1 "Female"), ge(gender_bin)
 
 mi set mlong
-mi register imputed mi_timesincelasttest recentlagvl
+mi register imputed mi_timesincelasttest recentlagvl_bin
 mi register regular age urban education curmar gender_bin 
 
 
 // Perform imputation
 ************************************
-mi impute chained (mlogit, augment) mi_timesincelasttest /// 
-                   (mlogit, augment) recentlagvl, /// 
-    add(20) rseed(12345)
+mi impute chained (mlogit) mi_timesincelasttest (logit) recentlagvl_bin = gender mi_country urban mi_age education, augment force add(20) rseed(12345)
 	
 // Creating distribution table by gender
 ************************************
