@@ -142,7 +142,10 @@ mi register regular age urban education curmar gender_bin
 
 // Perform imputation
 ************************************
-mi impute chained (mlogit) mi_timesincelasttest (logit) recentlagvl_bin = gender mi_country urban mi_age education, augment force add(20) rseed(12345)
+mi impute chained (mlogit, augment) mi_timesincelasttest = i.gender i.mi_country i.urban i.mi_age i.education, noauto add(20) rseed(12345)
+
+mi impute chained (logit, augment) recentlagvl_bin = i.gender i.mi_country i.urban i.mi_age i.education, add(20) rseed(12345)
+
 	
 // Creating distribution table by gender
 ************************************
