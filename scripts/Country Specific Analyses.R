@@ -5,6 +5,9 @@ p_load("source","here")
 
 source(here("scripts","Data Prep.R"))
 
+options(survey.lonely.psu = "adjust")
+
+
 ###Lesotho
 
 ##survey design
@@ -13,6 +16,25 @@ ls.ALL.survey <- allcountries %>%
   as_survey_design(strata = varstrat, 
                    weights = btwt0,
                    ids = personid)
+
+## gender gap plot
+ls.ALL.survey %>%
+  group_by(gender) %>%
+  summarise(
+    pct = survey_mean(tri90aware == 1, vartype = "ci", proportion = TRUE)
+  ) %>%
+  ggplot(aes(x = as_factor(gender), y = pct, fill = as_factor(gender))) +
+  geom_col(width = 0.6) +
+  geom_errorbar(aes(ymin = pct_low, ymax = pct_upp), width = 0.2) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Lesotho: Percentage Aware of HIV Status by Gender",
+    x = "Gender",
+    y = "% Aware (tri90aware == 1)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
 
 ##descriptive stats
 tbl_svysummary(ls.ALL.survey, by = gender, 
@@ -41,6 +63,24 @@ mw.ALL.survey <- allcountries %>%
                    weights = btwt0,
                    ids = personid)
 
+## gender gap plot
+mw.ALL.survey %>%
+  group_by(gender) %>%
+  summarise(
+    pct = survey_mean(tri90aware == 1, vartype = "ci", proportion = TRUE)
+  ) %>%
+  ggplot(aes(x = as_factor(gender), y = pct, fill = as_factor(gender))) +
+  geom_col(width = 0.6) +
+  geom_errorbar(aes(ymin = pct_low, ymax = pct_upp), width = 0.2) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Malawi: Percentage Aware of HIV Status by Gender",
+    x = "Gender",
+    y = "% Aware (tri90aware == 1)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
 ##descriptive stats
 tbl_svysummary(mw.ALL.survey, by = gender, 
                statistic = list(all_continuous() ~ "{mean} ({sd})"),
@@ -67,6 +107,25 @@ mz.ALL.survey <- allcountries %>%
   as_survey_design(strata = varstrat, 
                    weights = btwt0,
                    ids = personid)
+
+## gender gap plot
+mz.ALL.survey %>%
+  group_by(gender) %>%
+  summarise(
+    pct = survey_mean(tri90aware == 1, vartype = "ci", proportion = TRUE)
+  ) %>%
+  ggplot(aes(x = as_factor(gender), y = pct, fill = as_factor(gender))) +
+  geom_col(width = 0.6) +
+  geom_errorbar(aes(ymin = pct_low, ymax = pct_upp), width = 0.2) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Mozambique: Percentage Aware of HIV Status by Gender",
+    x = "Gender",
+    y = "% Aware (tri90aware == 1)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
 
 ##descriptive stats
 tbl_svysummary(mz.ALL.survey, by = gender, 
@@ -95,6 +154,25 @@ sz.ALL.survey <- allcountries %>%
                    weights = btwt0,
                    ids = personid)
 
+## gender gap plot
+sz.ALL.survey %>%
+  group_by(gender) %>%
+  summarise(
+    pct = survey_mean(tri90aware == 1, vartype = "ci", proportion = TRUE)
+  ) %>%
+  ggplot(aes(x = as_factor(gender), y = pct, fill = as_factor(gender))) +
+  geom_col(width = 0.6) +
+  geom_errorbar(aes(ymin = pct_low, ymax = pct_upp), width = 0.2) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Eswatini: Percentage Aware of HIV Status by Gender",
+    x = "Gender",
+    y = "% Aware (tri90aware == 1)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+
 ##descriptive stats
 tbl_svysummary(sz.ALL.survey, by = gender, 
                statistic = list(all_continuous() ~ "{mean} ({sd})"),
@@ -122,6 +200,25 @@ tz.ALL.survey <- allcountries %>%
                    weights = btwt0,
                    ids = personid)
 
+## gender gap plot
+tz.ALL.survey %>%
+  group_by(gender) %>%
+  summarise(
+    pct = survey_mean(tri90aware == 1, vartype = "ci", proportion = TRUE)
+  ) %>%
+  ggplot(aes(x = as_factor(gender), y = pct, fill = as_factor(gender))) +
+  geom_col(width = 0.6) +
+  geom_errorbar(aes(ymin = pct_low, ymax = pct_upp), width = 0.2) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Tanzania: Percentage Aware of HIV Status by Gender",
+    x = "Gender",
+    y = "% Aware (tri90aware == 1)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+
 ##descriptive stats
 tbl_svysummary(tz.ALL.survey, by = gender, 
                statistic = list(all_continuous() ~ "{mean} ({sd})"),
@@ -148,6 +245,25 @@ ug.ALL.survey <- allcountries %>%
   as_survey_design(strata = varstrat, 
                    weights = btwt0,
                    ids = personid)
+
+## gender gap plot
+ug.ALL.survey %>%
+  group_by(gender) %>%
+  summarise(
+    pct = survey_mean(tri90aware == 1, vartype = "ci", proportion = TRUE)
+  ) %>%
+  ggplot(aes(x = as_factor(gender), y = pct, fill = as_factor(gender))) +
+  geom_col(width = 0.6) +
+  geom_errorbar(aes(ymin = pct_low, ymax = pct_upp), width = 0.2) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Uganda: Percentage Aware of HIV Status by Gender",
+    x = "Gender",
+    y = "% Aware (tri90aware == 1)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
 
 ##descriptive stats
 tbl_svysummary(ug.ALL.survey, by = gender, 

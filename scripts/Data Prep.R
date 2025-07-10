@@ -752,9 +752,3 @@ var_label(allcountries$tri90aware) <- "Aware recode (adjusted for ARV data) for 
 
 ###exporting cleaned data in a .dta file to be used in Stata
 write_dta(allcountries, "allcountries.dta")
-
-###accounting for the survey design
-allcountries.survey <- allcountries |>
-  as_survey_design(strata = varstrat, 
-                   weights = btwt0_b,
-                   ids = personid)

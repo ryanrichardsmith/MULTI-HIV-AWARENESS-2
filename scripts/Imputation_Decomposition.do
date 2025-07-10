@@ -9,13 +9,18 @@
 * PART 1: Death registration outcomes and descriptives                         *
 * ---------------------------------------------------------------------------- *
 
-cd "/Users/nyuad/Downloads/MULTI-HIV AWARENESS 2"
+cd "/Users/ryansmith/Downloads/MULTI-HIV-AWARENESS-2"
 use "allcountries.dta", clear
 
 * Outcomes
 
 recode tri90aware (1=1 "Aware or considered aware because ARVs detectable") (2=0 "Unaware and ARVs not detectable or unaware and ARVs missing"), ge(awareness_outcome) 
 label var awareness_outcome "Aware recode (adjusted for ARV data) for cascade analysis"
+encode timesincelasttest, gen(mi_timesincelasttest)
+encode age_cat, gen(mi_age)
+encode country, gen(mi_country)
+recode recentlagvl (1=0 "(1) Positive: recent") (2=1 "(2) Positive: long term"), ge(recentlagvl_bin)
+recode gender (1=0 "Male") (2=1 "Female"), ge(gender_bin)
 
 svyset [pweight=btwt0_b], strata(varstrat) singleunit(centered)
 
@@ -62,25 +67,20 @@ ssc install fairlie, replace
 
 *preserve 
 *keep if  age_death_collapsed > 1 //Sample aged 15+
-encode timesincelasttest, gen(mi_timesincelasttest)
-encode age_cat, gen(mi_age)
-encode country, gen(mi_country)
-
 *drop if mi_educ_death_det == 999 //dropping inapplicable
 
 
 // Set up MI environment
 ************************************
-recode recentlagvl (1=0 "(1) Positive: recent") (2=1 "(2) Positive: long term"), ge(recentlagvl_bin)
 
 mi set mlong
-mi register imputed mi_timesincelasttest recentlagvl_bin 
-mi register regular age urban education curmar gender
+mi register imputed mi_timesincelasttest recentlagvl_bin education
+mi register regular age urban curmar gender
 
 
 // Perform imputation
 ************************************
-mi impute chained (mlogit) mi_timesincelasttest (logit) recentlagvl_bin = gender mi_country urban mi_age education, augment force add(20) rseed(12345)
+mi impute chained (mlogit) mi_timesincelasttest (logit) recentlagvl_bin (mlogit) education = i.gender i.mi_country i.urban i.mi_age, augment force add(20) rseed(12345)
 	
 // Define control variables
 ************************************
@@ -133,18 +133,14 @@ drop if mi_educ_death_det == 999 //dropping inapplicable
 
 // Set up MI environment
 ************************************
-recode gender (1=0 "Male") (2=1 "Female"), ge(gender_bin)
-
 mi set mlong
-mi register imputed mi_timesincelasttest recentlagvl_bin
-mi register regular age urban education curmar gender_bin 
+mi register imputed mi_timesincelasttest recentlagvl_bin education
+mi register regular age urban curmar gender_bin 
 
 
 // Perform imputation
 ************************************
-mi impute chained (mlogit, augment) mi_timesincelasttest = i.gender i.mi_country i.urban i.mi_age i.education, noauto add(20) rseed(12345)
-
-mi impute chained (logit, augment) recentlagvl_bin = i.gender i.mi_country i.urban i.mi_age i.education, add(20) rseed(12345)
+mi impute chained (mlogit) mi_timesincelasttest (logit) recentlagvl_bin (mlogit) education = i.gender i.mi_country i.urban i.mi_age, augment force add(20) rseed(12345)
 
 	
 // Creating distribution table by gender
@@ -199,7 +195,7 @@ mi passive: gen mi_country6 = (mi_country == 6)
 
 capture program drop fairlie_boot_all
 program define fairlie_boot_all, rclass 
-    fairlie awareness_outcome (mi_timesincelasttest: mi_timesincelasttest1-mi_timesincelasttest3) mi_recentlagvl1 if mi_country == 5 [iweight = btwt0_b], by(gender_bin) pooled(mi_gender_bin0 mi_age2-mi_age7 mi_curmar2-mi_curmar5 mi_urban2 mi_education2-mi_education4 mi_country1-mi_country5 mi_timesincelasttest1-mi_timesincelasttest3 mi_recentlagvl1)
+    fairlie awareness_outcome (mi_timesincelasttest: mi_timesincelasttest1-mi_timesincelasttest3) mi_recentlagvl1 [iweight = btwt0_b], by(gender_bin) pooled(mi_gender_bin0 mi_age2-mi_age7 mi_curmar2-mi_curmar5 mi_urban2 mi_education2-mi_education4 mi_country1-mi_country5 mi_timesincelasttest1-mi_timesincelasttest3 mi_recentlagvl1)
 		
          
     matrix b = e(b)

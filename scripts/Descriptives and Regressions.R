@@ -5,6 +5,33 @@ p_load("source","here")
 
 source(here("scripts","Data Prep.R"))
 
+allcountries <- read_dta(here("allcountries.dta"))
+
+###accounting for the survey design
+allcountries.survey <- allcountries |>
+  as_survey_design(strata = varstrat, 
+                   weights = btwt0_b,
+                   ids = personid)
+
+
+### gender gap plot
+allcountries.survey %>%
+  group_by(gender) %>%
+  summarise(
+    pct = survey_mean(tri90aware == 1, vartype = "ci", proportion = TRUE)
+  ) %>%
+  ggplot(aes(x = as_factor(gender), y = pct, fill = as_factor(gender))) +
+  geom_col(width = 0.6) +
+  geom_errorbar(aes(ymin = pct_low, ymax = pct_upp), width = 0.2) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "All Countries: Percentage Aware of HIV Status by Gender",
+    x = "Gender",
+    y = "% Aware (tri90aware == 1)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
 
 ###descriptive statistics 
 
