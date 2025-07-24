@@ -22,8 +22,6 @@ encode country, gen(mi_country)
 recode recentlagvl (1=0 "(1) Positive: recent") (2=1 "(2) Positive: long term"), ge(recentlagvl_bin)
 recode gender (1=0 "Male") (2=1 "Female"), ge(gender_bin)
 
-svyset [pweight=btwt0_b], strata(varstrat) singleunit(centered)
-
 ssc install table1_mc, replace
 ssc install estout, replace
 ssc install fairlie, replace
@@ -75,7 +73,7 @@ ssc install fairlie, replace
 
 mi set mlong
 mi register imputed mi_timesincelasttest recentlagvl_bin education
-mi register regular age urban curmar gender
+mi register regular mi_age urban curmar gender
 
 
 // Perform imputation
@@ -84,24 +82,59 @@ mi impute chained (mlogit) mi_timesincelasttest (logit) recentlagvl_bin (mlogit)
 	
 // Define control variables
 ************************************
-global indicontrols   "i.mi_timesincelasttest i.recentlagvl_bin i.urban i.curmar c.age"
+global indicontrols   "i.mi_timesincelasttest i.recentlagvl_bin i.urban i.education i.curmar i.mi_age"
 *global deathscontrols "i.accidental ib1.facility"
 
 
+// Pooled models
+************************************
 // Regression models full sample
-mi estimate, post: svy: logit awareness_outcome i.gender $indicontrols, allbaselevels
+
+mi svyset [pweight=btwt0], strata(varstrat) singleunit(centered)
+
+mi estimate, post: svy: logit awareness_outcome i.gender i.mi_timesincelasttest i.recentlagvl_bin, allbaselevels
 est store m2
 
-// Regression models by gender
-mi estimate, post: svy: logit awareness_outcome $indicontrols if gender == 1, allbaselevels
+mi estimate, post: svy: logit awareness_outcome i.gender i.mi_country $indicontrols, allbaselevels
 est store m3
 
-mi estimate, post: svy: logit awareness_outcome $indicontrols if gender == 2, allbaselevels
-est store m4
+
+// Regression models by gender
+//mi estimate, post: svy: logit awareness_outcome $indicontrols if gender == 1, allbaselevels
+//est store m3
+
+//mi estimate, post: svy: logit awareness_outcome $indicontrols if gender == 2, allbaselevels
+//est store m4
 
 // Table 2_mi
-esttab m* using "_Table 2 MI.xls", b(2) eform ci(2) ///
-nobase tab collabels("OR/CI") stats(N, fmt(0 2) label(Observations)) label replace
+esttab m* using "Table 2 MI.rtf", b(2) eform ci(2) rtf ///
+collabels("OR/CI (Aware = 1, Unaware = 0)") stats(N, fmt(0 2) label(Observations)) label star(* 0.05 ** 0.01 *** 0.001) title("Odds Ratios from Multiple Imputation Model") replace
+
+// Country-specific model template 
+//(at each _, insert numeric country code)
+************************************
+// Regression models full sample
+
+mi svyset [pweight=btwt0_b], strata(varstrat) singleunit(centered)
+
+mi estimate, post: svy: logit awareness_outcome i.gender i.mi_timesincelasttest i.recentlagvl_bin if mi_country == _, allbaselevels 
+est store m4
+
+mi estimate, post: svy: logit awareness_outcome i.gender $indicontrols if mi_country == _, allbaselevels 
+est store m5
+
+// Regression models by gender
+//mi estimate, post: svy: logit awareness_outcome $indicontrols if gender == 1, allbaselevels
+//est store m3
+
+//mi estimate, post: svy: logit awareness_outcome $indicontrols if gender == 2, allbaselevels
+//est store m4
+
+// Table 2_mi
+esttab m* using "COUNTRYNAME_Table_2_MI.rtf", b(2) eform ci(2) ///
+rtf collabels("OR/CI (Aware = 1, Unaware = 0)") stats(N, fmt(0 2) label(Observations)) label ///
+star(* 0.05 ** 0.01 *** 0.001) title("Odds Ratios from Multiple Imputation Model - COUNTRYNAME") replace
+
 *restore
 	
 
@@ -190,12 +223,13 @@ mi passive: gen mi_country4 = (mi_country == 4)
 mi passive: gen mi_country5 = (mi_country == 5)
 mi passive: gen mi_country6 = (mi_country == 6)
 
-// Define bootstrapping program
+// Define bootstrapping program:
+// pooled
 ************************************
 
 capture program drop fairlie_boot_all
 program define fairlie_boot_all, rclass 
-    fairlie awareness_outcome (mi_timesincelasttest: mi_timesincelasttest1-mi_timesincelasttest3) mi_recentlagvl1 [iweight = btwt0_b], by(gender_bin) pooled(mi_gender_bin0 mi_age2-mi_age7 mi_curmar2-mi_curmar5 mi_urban2 mi_education2-mi_education4 mi_country1-mi_country5 mi_timesincelasttest1-mi_timesincelasttest3 mi_recentlagvl1)
+    fairlie awareness_outcome (mi_timesincelasttest: mi_timesincelasttest1-mi_timesincelasttest3) mi_recentlagvl1 [iweight = btwt0], by(gender_bin) pooled(mi_gender_bin0 mi_age2-mi_age7 mi_curmar2-mi_curmar5 mi_urban2 mi_education2-mi_education4 mi_country1-mi_country5 mi_timesincelasttest1-mi_timesincelasttest3 mi_recentlagvl1)
 		
          
     matrix b = e(b)
@@ -210,6 +244,30 @@ program define fairlie_boot_all, rclass
     return scalar explained = e(expl)
     return scalar unexplained = e(diff) - e(expl)
 end
+
+// Define bootstrapping program:
+// country-specific 
+//(at the _, insert numeric country code)
+************************************
+
+capture program drop fairlie_boot_all
+program define fairlie_boot_all, rclass 
+    fairlie awareness_outcome (mi_timesincelasttest: mi_timesincelasttest1-mi_timesincelasttest3) mi_recentlagvl1 if mi_country == _ [iweight = btwt0_b], by(gender_bin) pooled(mi_gender_bin0 mi_age2-mi_age7 mi_curmar2-mi_curmar5 mi_urban2 mi_education2-mi_education4 mi_timesincelasttest1-mi_timesincelasttest3 mi_recentlagvl1)
+		
+         
+    matrix b = e(b)
+    return scalar mi_timesincelasttest = b[1,1]
+    return scalar mi_recentlagvl1 = b[1,2]
+    *return scalar mi_urban2 = b[1,3]
+    *return scalar education = b[1,4]
+    *return scalar mi_timesincelasttest = b[1,5]
+    *return scalar mi_recentlagvl1 = b[1,6]
+
+    return scalar total_diff = e(diff)
+    return scalar explained = e(expl)
+    return scalar unexplained = e(diff) - e(expl)
+end
+
 
 
 
