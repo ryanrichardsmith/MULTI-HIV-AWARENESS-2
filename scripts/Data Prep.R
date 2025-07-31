@@ -97,6 +97,17 @@ mz.adultbio <- read_dta(here("INSIDA 2021","insida2021adultbio.dta"))
         mz.adultind <- mz.adultind %>%
           rename(hivtstlocation = hivtstlocation_mz)
         
+        #converting province variable to be a character string to avoid conflicting
+        #value labels when merging
+        #Renaming the province variable to region for consistency with other data sets
+        mz.adultind$region <- as.character(as_factor(mz.adultind$province))
+        mz.adultbio$region <- as.character(as_factor(mz.adultbio$province))
+        
+        #renaming remaining variables that end in _mz
+        colnames(mz.adultind) <- gsub("_mz$", "", colnames(mz.adultind))
+        colnames(mz.adultbio) <- gsub("_mz$", "", colnames(mz.adultbio))
+        
+        
 ##Lesotho
 ls.adultind <- read_dta(here("LePHIA 2020","lephia2020adultind.dta"))
 ls.adultbio <- read_dta(here("LePHIA 2020","lephia2020adultbio.dta"))
@@ -177,6 +188,16 @@ ls.adultbio <- read_dta(here("LePHIA 2020","lephia2020adultbio.dta"))
                      "Other (Specify)" = 96),
           label = "Where last HIV test was conducted"
         )
+        
+        #converting district variable to be a character string to avoid conflicting
+        #value labels when merging and
+        #Renaming the district variable to region for consistency with other data sets
+        ls.adultind$region <- as.character(as_factor(ls.adultind$district))
+        ls.adultbio$region <- as.character(as_factor(ls.adultbio$district))
+        
+        #renaming remaining variables that end in _ls
+        colnames(ls.adultind) <- gsub("_ls$", "", colnames(ls.adultind))
+        colnames(ls.adultbio) <- gsub("_ls$", "", colnames(ls.adultbio))
         
 ##Malawi
 mw.adultind <- read_dta(here("MPHIA 2020-2021","mphia2020adultind.dta"))
@@ -289,6 +310,16 @@ mw.adultbio <- read_dta(here("MPHIA 2020-2021","mphia2020adultbio.dta"))
           label = "Where last HIV test was conducted"
         )
         
+        #converting zone variable to be a character string to avoid conflicting
+        #value labels when merging and
+        #Renaming the zone variable to region for consistency with other data sets
+        mw.adultind$region <- as.character(as_factor(mw.adultind$zone))
+        mw.adultbio$region <- as.character(as_factor(mw.adultbio$zone))
+        
+        #renaming remaining variables that end in _mw
+        colnames(mw.adultind) <- gsub("_mw$", "", colnames(mw.adultind))
+        colnames(mw.adultbio) <- gsub("_mw$", "", colnames(mw.adultbio))
+
 ##Eswatini
 sz.adultind <- read_dta(here("SHIMS3 2021","shims32021adultind.dta"))
 sz.adultbio <- read_dta(here("SHIMS3 2021","shims32021adultbio.dta"))
@@ -401,6 +432,15 @@ sz.adultbio <- read_dta(here("SHIMS3 2021","shims32021adultbio.dta"))
                      "Other (Specify)" = 96),
           label = "Where last HIV test was conducted"
         )
+        
+        #converting region variable to be a character string to avoid conflicting
+        #value labels when merging
+        sz.adultind$region <- as.character(as_factor(sz.adultind$region))
+        sz.adultbio$region <- as.character(as_factor(sz.adultbio$region))
+        
+        #renaming remaining variables that end in _sz
+        colnames(sz.adultind) <- gsub("_sz$", "", colnames(sz.adultind))
+        colnames(sz.adultbio) <- gsub("_sz$", "", colnames(sz.adultbio))
 
 ##Tanzania
 tz.adultind <- read_dta(here("THIS 2022-2023","this2022adultind.dta"))
@@ -489,6 +529,12 @@ tz.adultbio <- read_dta(here("THIS 2022-2023","this2022adultbio.dta"))
         
         #renaming remaining variables that end in _tz
         colnames(tz.adultind) <- gsub("_tz$", "", colnames(tz.adultind))
+        colnames(tz.adultbio) <- gsub("_tz$", "", colnames(tz.adultbio))
+        
+        #converting region variable to be a character string to avoid conflicting
+        #value labels when merging
+        tz.adultind$region <- as.character(as_factor(tz.adultind$region))
+        tz.adultbio$region <- as.character(as_factor(tz.adultbio$region))
         
 ##Uganda
 ug.adultind <- read_dta(here("UPHIA 2020-2021","uphia2020adultind.dta"))
@@ -615,6 +661,12 @@ ug.adultbio <- read_dta(here("UPHIA 2020-2021","uphia2020adultbio.dta"))
           
           #renaming remaining variables that end in _ug
           colnames(ug.adultind) <- gsub("_ug$", "", colnames(ug.adultind))
+          colnames(ug.adultbio) <- gsub("_ug$", "", colnames(ug.adultbio))
+          
+          #converting region variable to be a character string to avoid conflicting
+          #value labels when merging
+          ug.adultind$region <- as.character(as_factor(ug.adultind$region))
+          ug.adultbio$region <- as.character(as_factor(ug.adultbio$region))
           
 ###joining biomarker and interview data for each country
 countries = list("mz","ls","mw","sz","tz","ug")
