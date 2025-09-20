@@ -7,13 +7,6 @@ source(here("scripts","Data Prep.R"))
 
 ###reasons for never being tested by gender & country
 
-#reclassifying reason for never testing as NULL for those aware of their status
-# allcountries <- allcountries %>%
-#   mutate(across(
-#     starts_with("hivtstnvrrsn_"),
-#     ~ ifelse(statusawareness == "Positive: Aware", NA, .)
-#   ))
-
 #pivoting the data so that each respondent has one row per reason
 hivtstnvrrsn_long <- allcountries %>%
   pivot_longer(
