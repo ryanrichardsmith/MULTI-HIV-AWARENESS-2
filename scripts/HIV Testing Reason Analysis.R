@@ -1,7 +1,7 @@
 install.packages("pacman")
 library(pacman)
 
-p_load("source","here")
+p_load("here")
 
 source(here("scripts","Data Prep.R"))
 
@@ -82,9 +82,11 @@ hivtstnvrrsn_long_svy %>%
 allcountries <- allcountries %>%
   mutate(hivtstrsn = recode(hivtstrsn,
                             "(54) Testing offered/required by school/work" = 
-                              "(1) Was Offered Test By Health Care Or Outreach Worker",
+                              "(11) Provider-Initiated Testing",
                             "Visited hospital/clinic for other health reason" = 
-                              "(1) Was Offered Test By Health Care Or Outreach Worker",
+                              "(11) Provider-Initiated Testing",
+                            "(55) Visited hospital/clinic for other health reason" = 
+                              "(11) Provider-Initiated Testing",
                             "(53) Post-natal care" = "(6) Pregnancy",
                             "(7) My Partner Tested Positive" = "(3) Felt At Risk",
                             "(5) New Partner" = "(3) Felt At Risk"
@@ -92,55 +94,85 @@ allcountries <- allcountries %>%
 
 #imputing reasons for last test for individuals aware of their status
 
+#removing individual survey variables to reduce computing load
+allcountries_sub <- allcountries %>% 
+  select(
+    varstrat,
+    btwt0,
+    personid,
+    hivtstrsn,
+    statusawareness,                
+    country,                        
+    gender,                
+    age,                            
+    urban,                          
+    curmar,                         
+    education                       
+  )
+
 #only including predictors which have at least as many categories as hivtstrsn
 #to avoid contrasts error
-predictors <- sapply(setdiff(names(allcountries), "hivtstrsn"), function(x) {
-  n_distinct_values <- length(unique(allcountries[[x]][is.na(allcountries[["hivtstrsn"]])]))
-  n_categories <- length(unique(allcountries[["hivtstrsn"]]))
+predictors <- sapply(setdiff(names(allcountries_sub), "hivtstrsn"), function(x) {
+  n_distinct_values <- length(unique(allcountries_sub[[x]][is.na(allcountries_sub[["hivtstrsn"]])]))
+  n_categories <- length(unique(allcountries_sub[["hivtstrsn"]]))
   n_distinct_values >= n_categories
 })
 
-pred_matrix <- make.predictorMatrix(allcountries)
+pred_matrix <- make.predictorMatrix(allcountries_sub)
 pred_matrix["hivtstrsn", ] <- 0
 pred_matrix["hivtstrsn", names(predictors)[predictors]] <- 1
+excluded_vars <- c("btwt0", "varstrat", "personid")
+pred_matrix["hivtstrsn", excluded_vars] <- 0
 
 #imputation code
-method <- make.method(allcountries)
+method <- make.method(allcountries_sub)
 method["hivtstrsn"] <- "polyreg"
 
-imputation <- mice(allcountries, m = 20, method = method, predictorMatrix = pred_matrix,
+imputation <- mice(allcountries_sub, m = 20, method = method, predictorMatrix = pred_matrix,
                    print = FALSE, seed = 12345)
 
-#(attempting) ggmice plot
-ggmice(imputation, fun = function(data) {
-  data %>%
+###ggmice plot
+
+# applying summarizing code to each imputed dataset
+plot_data <- map_dfr(1:20, function(i) {
+  complete(imputation, i) %>%
     filter(
       !is.na(hivtstrsn),
-      !hivtstrsn %in% c("(-8) Don't Know")
+      !hivtstrsn %in% c("(-8) Don't Know", "(-9) Refused")
     ) %>%
     group_by(country, gender, statusawareness, hivtstrsn) %>%
-    summarise(n = n(), .groups = "drop") %>%  
+    summarise(n = n(), .groups = "drop") %>%
     group_by(country, gender, statusawareness) %>%
     mutate(
       percentage = n / sum(n) * 100,
-      reason = str_sub(hivtstrsn, 5)
+      reason = str_sub(hivtstrsn, 5),
+      imputation = i
     ) %>%
     ungroup()
-}, mapping = aes(x = statusawareness, y = percentage, fill = reason)) +
+})
+
+# Average percentages across imputations
+plot_summary <- plot_data %>%
+  group_by(country, gender, statusawareness, reason) %>%
+  summarise(
+    mean_percentage = mean(percentage, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Plot averaged percentages
+ggplot(plot_summary, aes(x = statusawareness, y = mean_percentage, fill = reason)) +
   geom_col(position = "fill") +
-  scale_fill_viridis(discrete = TRUE, option = "turbo") +
+  scale_fill_viridis(discrete = TRUE, option = "magma") +
   scale_y_continuous(labels = scales::percent) +
   facet_grid(country ~ gender, scales = "fixed") +
   labs(
     x = "Status Awareness",
     y = "Percentage of Respondents",
     fill = "Reason for Last HIV Test",
-    title = "Distribution of Reasons for Last HIV Test by Status Awareness, Gender, and Country"
+    title = "Distribution of Reasons for Last HIV Test by Status Awareness, Gender, and Country\n(Averaged Across Imputations)"
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-
 
 
 
